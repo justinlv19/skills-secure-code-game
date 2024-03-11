@@ -7,6 +7,9 @@
 // 3. Run hack.c and if passing then CONGRATS!
 // 4. Compare your solution with solution.c
 
+// Trying to write to illegal location (negative index of user_account->setting) (update_setting)
+// Trying to read uninitialized user (username, is_admin, update_setting) MAX_USERNAME -> userid_next
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -70,7 +73,7 @@ int create_user_account(bool isAdmin, const char *username) {
 // Updates the matching setting for the specified user and returns the status of the operation
 // A setting is some arbitrary string associated with an index as a key
 bool update_setting(int user_id, const char *index, const char *value) {
-    if (user_id < 0 || user_id >= MAX_USERS)
+    if (user_id < 0 || user_id >= userid_next)
         return false;
 
     char *endptr;
@@ -80,15 +83,20 @@ bool update_setting(int user_id, const char *index, const char *value) {
         return false;
 
     v = strtol(value, &endptr, 10);
-    if (*endptr || i >= SETTINGS_COUNT)
+    if (*endptr || i >= SETTINGS_COUNT || i < 0)
         return false;
+
+    // loop around
+    i %= SETTINGS_COUNT;
+    i = i < 0 ? i : i + SETTINGS_COUNT;
+
     accounts[user_id]->setting[i] = v;
     return true;
 }
 
 // Returns whether the specified user is an admin
 bool is_admin(int user_id) {
-    if (user_id < 0 || user_id >= MAX_USERS) {
+    if (user_id < 0 || user_id >= userid_next) {
         fprintf(stderr, "invalid user id");
         return false;
     }    
@@ -98,7 +106,7 @@ bool is_admin(int user_id) {
 // Returns the username of the specified user
 const char* username(int user_id) {
     // Returns an error for invalid user ids
-    if (user_id < 0 || user_id >= MAX_USERS) {
+    if (user_id < 0 || user_id >= userid_next) {
         fprintf(stderr, "invalid user id");
         return NULL;
     }    
