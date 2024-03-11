@@ -12,6 +12,7 @@ the tests.py again to recreate it.
 import sqlite3
 import os
 from flask import Flask, request
+import re
 
 ### Unrelated to the exercise -- Starts here -- Please ignore
 app = Flask(__name__)
@@ -75,10 +76,19 @@ class Create(object):
 
 class DB_CRUD_ops(object):
 
+    def clean_stock(self, stock_symbol):
+        stock_symbol = re.search(r"^(\w{1,4})", stock_symbol)
+        stock_symbol = stock_symbol.group(1)
+
+        if stock_symbol is None:
+            return None
+        return stock_symbol
+
     # retrieves all info about a stock symbol from the stocks table
     # Example: get_stock_info('MSFT') will result into executing
     # SELECT * FROM stocks WHERE symbol = 'MSFT'
     def get_stock_info(self, stock_symbol):
+        
         # building database from scratch as it is more suitable for the purpose of the lab
         db = Create()
         con = Connect()
@@ -99,8 +109,13 @@ class DB_CRUD_ops(object):
             # checks if input contains a wrong number of single quotes against SQL injection
             correct_number_of_single_quotes = query.count("'") == 2
 
+            #! Dislike this solution, would rather sanitize before starting the try command
+            stock_symbol = self.clean_stock(stock_symbol)
+            if stock_symbol is None:
+                pass
+        
             # performs the checks for good cyber security and safe software against SQL injection
-            if has_restricted_char or not correct_number_of_single_quotes:
+            elif has_restricted_char or not correct_number_of_single_quotes:
                 # in case you want to sanitize user input, please uncomment the following 2 lines
                 # sanitized_query = query.translate({ord(char):None for char in restricted_chars})
                 # res += "[SANITIZED_QUERY]" + sanitized_query + "\n"
@@ -123,6 +138,10 @@ class DB_CRUD_ops(object):
     # Example: get_stock_price('MSFT') will result into executing
     # SELECT price FROM stocks WHERE symbol = 'MSFT'
     def get_stock_price(self, stock_symbol):
+        stock_symbol = self.clean_stock(stock_symbol)
+        if stock_symbol is None:
+            return "[RESULT] "
+        
         # building database from scratch as it is more suitable for the purpose of the lab
         db = Create()
         con = Connect()
@@ -153,6 +172,12 @@ class DB_CRUD_ops(object):
 
     # updates stock price
     def update_stock_price(self, stock_symbol, price):
+        stock_symbol = self.clean_stock(stock_symbol)
+        if stock_symbol is None:
+            return "[RESULT] "
+        if price < 0 or price > 1000:
+            return "[RESULT] "
+    
         # building database from scratch as it is more suitable for the purpose of the lab
         db = Create()
         con = Connect()
