@@ -3,6 +3,7 @@
 # You know how to play by now, good luck!
 
 import os
+from typing import Optional
 from flask import Flask, request
 
 ### Unrelated to the exercise -- Starts here -- Please ignore
@@ -21,6 +22,15 @@ class TaxPayer:
         self.prof_picture = None
         self.tax_form_attachment = None
 
+    def get_clean_path(self, path) -> Optional[str]:
+        permitted = os.path.dirname(os.path.abspath(__file__))
+        path = path if os.path.isabs(path) else permitted + "/" + path # convert relative paths to absolute
+        path = os.path.abspath(os.path.normpath(path)) # resolve path (where there are "..")
+    
+        if permitted not in path[:len(permitted)]: # make sure that it is a subdirectory of current folder
+            return None
+        return path
+
     # returns the path of an optional profile picture that users can set
     def get_prof_picture(self, path=None):
         # setting a profile picture is optional
@@ -28,7 +38,8 @@ class TaxPayer:
             pass
 
         # defends against path traversal attacks
-        if path.startswith('/') or path.startswith('..'):
+        path = self.get_clean_path(path)
+        if path is None:
             return None
 
         # builds path
@@ -47,6 +58,10 @@ class TaxPayer:
 
         if not path:
             raise Exception("Error: Tax form is required for all users")
+
+        path = self.get_clean_path(path)
+        if path is None:
+            return None
 
         with open(path, 'rb') as form:
             tax_data = bytearray(form.read())
