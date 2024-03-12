@@ -37,16 +37,21 @@ def index():
     if request.method == 'POST':
         planet = request.form.get('planet')
         sanitized_planet = re.sub(r'[<>{}[\]]', '', planet if planet else '')
+        #sanitized_planet = escape(sanitized_planet) // can use HTML character escape instead
 
-        if sanitized_planet:
-            if 'script' in sanitized_planet.lower() :
-                return '<h2>Blocked</h2></p>'
-    
-            return render_template('details.html', 
-                                   planet=sanitized_planet, 
-                                   info=get_planet_info(sanitized_planet))
-        else:
+        if not sanitized_planet:
             return '<h2>Please enter a planet name.</h2>'
+        
+        elif 'script' in sanitized_planet.lower() :
+        
+            return '<h2>Blocked</h2></p>'
+
+        elif sanitized_planet not in planet_data.keys(): # Create whitelist of planets rather than sanitizing (does not block xss attacks)
+            return '<h2>Please enter a planet name.</h2>'
+        else:
+            return render_template('details.html', 
+                                planet=sanitized_planet, 
+                                info=get_planet_info(sanitized_planet))
 
     return render_template('index.html')
 
