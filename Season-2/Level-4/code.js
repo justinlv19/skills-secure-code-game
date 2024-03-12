@@ -9,6 +9,8 @@
 // 5. If stuck then read the hint
 // 6. Compare your solution with solution.js
 
+// non optimal solution, compare 
+
 const express = require("express");
 const bodyParser = require("body-parser");
 const libxmljs = require("libxmljs");
@@ -24,19 +26,24 @@ app.use(bodyParser.text({ type: "application/xml" }));
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
+// admin feature should not be accessable through a "secret", must authenticate before being able to access feature
+// not needed feature can upload file then access through .admin
+
+
+/*
 app.post("/ufo/upload", upload.single("file"), (req, res) => {
   if (!req.file) {
     return res.status(400).send("No file uploaded.");
   }
 
-  console.log("Received uploaded file:", req.file.originalname);
+  console.log("Received uploaded file");
 
   const uploadedFilePath = path.join(__dirname, req.file.originalname);
   fs.writeFileSync(uploadedFilePath, req.file.buffer);
 
   res.status(200).send("File uploaded successfully.");
 });
-
+*/
 app.post("/ufo", (req, res) => {
   const contentType = req.headers["content-type"];
 
@@ -46,12 +53,12 @@ app.post("/ufo", (req, res) => {
   } else if (contentType === "application/xml") {
     try {
       const xmlDoc = libxmljs.parseXml(req.body, {
-        replaceEntities: true,
-        recover: true,
-        nonet: false,
+        replaceEntities: false, // xml entity expansion (XXE attack to read other files)
+        recover: false, // when cannot resolve dependancy, raises erorr
+        nonet: true, // get XML from internet
       });
 
-      console.log("Received XML data from XMLon:", xmlDoc.toString());
+      console.log("Received XML data from XMLon");
 
       const extractedContent = [];
 
@@ -64,27 +71,10 @@ app.post("/ufo", (req, res) => {
           }
         });
 
-      // Secret feature to allow an "admin" to execute commands
-      if (
-        xmlDoc.toString().includes('SYSTEM "') &&
-        xmlDoc.toString().includes(".admin")
-      ) {
-        extractedContent.forEach((command) => {
-          exec(command, (err, output) => {
-            if (err) {
-              console.error("could not execute command: ", err);
-              return;
-            }
-            console.log("Output: \n", output);
-            res.status(200).set("Content-Type", "text/plain").send(output);
-          });
-        });
-      } else {
         res
           .status(200)
           .set("Content-Type", "text/plain")
           .send(extractedContent.join(" "));
-      }
     } catch (error) {
       console.error("XML parsing or validation error:", error.message);
       res.status(400).send("Invalid XML: " + error.message);
